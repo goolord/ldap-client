@@ -1,3 +1,10 @@
+# 1 "Internal.hs"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 31 "<command-line>"
+# 1 "/usr/include/stdc-predef.h" 1 3 4
+# 32 "<command-line>" 2
+# 1 "Internal.hs"
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -27,34 +34,29 @@ module Ldap.Client.Internal
   , unbindAsyncSTM
   ) where
 
-import           Control.Concurrent.STM (STM, atomically)
-import           Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, readTMVar)
-import           Control.Concurrent.STM.TQueue (TQueue, writeTQueue)
-import           Control.Exception (Exception, throwIO)
-import           Control.Monad (void)
-import           Data.ByteString (ByteString)
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Text (Text)
-import           Data.Typeable (Typeable)
-#if __GLASGOW_HASKELL__ >= 84
-import           Network.Socket (PortNumber)
-#else
-import           Network (PortNumber)
-#endif
-import           Network.Connection (TLSSettings)
-
+import Control.Concurrent.STM (STM, atomically)
+import Control.Concurrent.STM.TMVar (TMVar, newEmptyTMVar, readTMVar)
+import Control.Concurrent.STM.TQueue (TQueue, writeTQueue)
+import Control.Exception (Exception, throwIO)
+import Control.Monad (void)
+import Data.ByteString (ByteString)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Text (Text)
+import Data.Typeable (Typeable)
+import Network.Socket (PortNumber)
+import Network.Connection (TLSSettings)
 import qualified Ldap.Asn1.Type as Type
 
 
 -- | LDAP host.
 data Host =
-    Plain String           -- ^ Plain LDAP.
+    Plain String -- ^ Plain LDAP.
   | Tls String TLSSettings -- ^ LDAP over TLS.
     deriving (Show)
 
 -- | A token. All functions that interact with the Directory require one.
 newtype Ldap = Ldap
-  { client  :: TQueue ClientMessage
+  { client :: TQueue ClientMessage
   } deriving (Eq)
 
 data ClientMessage = New !Request !(TMVar (NonEmpty Type.ProtocolServerOp))

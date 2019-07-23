@@ -1,16 +1,23 @@
+# 1 "Search.hs"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 31 "<command-line>"
+# 1 "/usr/include/stdc-predef.h" 1 3 4
+# 32 "<command-line>" 2
+# 1 "Search.hs"
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
--- | <https://tools.ietf.org/html/rfc4511#section-4.5 Search> operation.
+-- | <https:
 --
 -- This operation comes in four flavours:
 --
---   * synchronous, exception throwing ('search')
+-- * synchronous, exception throwing ('search')
 --
---   * synchronous, returning 'Either' 'ResponseError' @()@ ('searchEither')
+-- * synchronous, returning 'Either' 'ResponseError' @()@ ('searchEither')
 --
---   * asynchronous, 'IO' based ('searchAsync')
+-- * asynchronous, 'IO' based ('searchAsync')
 --
---   * asynchronous, 'STM' based ('searchAsyncSTM')
+-- * asynchronous, 'STM' based ('searchAsyncSTM')
 --
 -- Of those, the first one ('search') is probably the most useful for the typical usecase.
 module Ldap.Client.Search
@@ -34,20 +41,15 @@ module Ldap.Client.Search
   , waitSTM
   ) where
 
-import           Control.Monad.STM (STM, atomically)
-import           Data.Int (Int32)
-import           Data.List.NonEmpty (NonEmpty((:|)))
+import Control.Monad.STM (STM, atomically)
+import Data.Int (Int32)
+import Data.List.NonEmpty (NonEmpty((:|)))
+import Data.Maybe (mapMaybe)
+import Data.Monoid (Monoid(..))
+import Data.Semigroup (Semigroup(..))
+import Ldap.Client.Internal
 import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Maybe (mapMaybe)
-#if __GLASGOW_HASKELL__ >= 710
-import           Data.Semigroup (Semigroup(..))
-#else
-import           Data.Semigroup (Semigroup(..), Monoid(..))
-#endif
-
 import qualified Ldap.Asn1.Type as Type
-import           Ldap.Client.Internal
-
 
 -- | Perform the Search operation synchronously. Raises 'ResponseError' on failures.
 search :: Ldap -> Dn -> Mod Search -> Filter -> [Attr] -> IO [SearchEntry]
@@ -154,19 +156,19 @@ searchResult req res = Left (ResponseInvalid req res)
 
 -- | Search options. Use 'Mod' to change some of those.
 data Search = Search
-  { _scope        :: !Type.Scope
+  { _scope :: !Type.Scope
   , _derefAliases :: !Type.DerefAliases
-  , _size         :: !Int32
-  , _time         :: !Int32
-  , _typesOnly    :: !Bool
+  , _size :: !Int32
+  , _time :: !Int32
+  , _typesOnly :: !Bool
   } deriving (Show, Eq)
 
 defaultSearch :: Search
 defaultSearch = Search
-  { _scope        = Type.WholeSubtree
-  , _size         = 0
-  , _time         = 0
-  , _typesOnly    = False
+  { _scope = Type.WholeSubtree
+  , _size = 0
+  , _time = 0
+  , _typesOnly = False
   , _derefAliases = Type.NeverDerefAliases
   }
 
@@ -205,14 +207,14 @@ instance Monoid (Mod a) where
 
 -- | Conditions that must be fulfilled in order for the Search to match a given entry.
 data Filter =
-    Not !Filter             -- ^ Filter does not match the entry
-  | And !(NonEmpty Filter)  -- ^ All filters match the entry
-  | Or !(NonEmpty Filter)   -- ^ Any filter matches the entry
-  | Present !Attr           -- ^ Attribute is present in the entry
-  | !Attr := !AttrValue     -- ^ Attribute's value is equal to the assertion
-  | !Attr :>= !AttrValue    -- ^ Attribute's value is equal to or greater than the assertion
-  | !Attr :<= !AttrValue    -- ^ Attribute's value is equal to or less than the assertion
-  | !Attr :~= !AttrValue    -- ^ Attribute's value approximately matches the assertion
+    Not !Filter -- ^ Filter does not match the entry
+  | And !(NonEmpty Filter) -- ^ All filters match the entry
+  | Or !(NonEmpty Filter) -- ^ Any filter matches the entry
+  | Present !Attr -- ^ Attribute is present in the entry
+  | !Attr := !AttrValue -- ^ Attribute's value is equal to the assertion
+  | !Attr :>= !AttrValue -- ^ Attribute's value is equal to or greater than the assertion
+  | !Attr :<= !AttrValue -- ^ Attribute's value is equal to or less than the assertion
+  | !Attr :~= !AttrValue -- ^ Attribute's value approximately matches the assertion
   | !Attr :=* !(Maybe AttrValue, [AttrValue], Maybe AttrValue)
                             -- ^ Glob match
   | !(Maybe Attr, Maybe Attr, Bool) ::= !AttrValue

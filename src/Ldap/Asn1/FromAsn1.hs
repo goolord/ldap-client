@@ -5,26 +5,19 @@ module Ldap.Asn1.FromAsn1
   , FromAsn1
   ) where
 
-#if __GLASGOW_HASKELL__ >= 710
-import           Control.Applicative (Alternative(..), liftA2, optional)
-#else
-import           Control.Applicative (Applicative(..), Alternative(..), liftA2, optional)
-#endif
-import           Control.Monad (MonadPlus(..), (>=>), guard)
-#if __GLASGOW_HASKELL__ >= 806
-import           Control.Monad.Fail (MonadFail, fail)
-#endif
-import           Data.ASN1.Types (ASN1)
+import Control.Applicative (Applicative(..), Alternative(..), liftA2, optional)
+import Control.Monad (MonadPlus(..), (>=>), guard)
+import Control.Monad.Fail
+import Data.ASN1.Types (ASN1)
+import Data.Foldable (asum)
+import Data.List.NonEmpty (some1)
 import qualified Data.ASN1.Types as Asn1
-import           Data.Foldable (asum)
-import           Data.List.NonEmpty (some1)
 import qualified Data.Text.Encoding as Text
 
-import           Ldap.Asn1.Type
+import Ldap.Asn1.Type
 
 {-# ANN module ("HLint: ignore Use const" :: String) #-}
 {-# ANN module ("HLint: ignore Avoid lambda" :: String) #-}
-
 
 -- | Convert a part of ASN.1 stream to a LDAP type returning the remainder of the stream.
 parseAsn1 :: FromAsn1 a => [ASN1] -> Maybe ([ASN1], a)
@@ -39,32 +32,32 @@ class FromAsn1 a where
 {- |
 @
 LDAPMessage ::= SEQUENCE {
-     messageID       MessageID,
-     protocolOp      CHOICE {
-          bindRequest           BindRequest,
-          bindResponse          BindResponse,
-          unbindRequest         UnbindRequest,
-          searchRequest         SearchRequest,
-          searchResEntry        SearchResultEntry,
-          searchResDone         SearchResultDone,
-          searchResRef          SearchResultReference,
-          addRequest            AddRequest,
-          addResponse           AddResponse,
+     messageID MessageID,
+     protocolOp CHOICE {
+          bindRequest BindRequest,
+          bindResponse BindResponse,
+          unbindRequest UnbindRequest,
+          searchRequest SearchRequest,
+          searchResEntry SearchResultEntry,
+          searchResDone SearchResultDone,
+          searchResRef SearchResultReference,
+          addRequest AddRequest,
+          addResponse AddResponse,
           ... },
-     controls       [0] Controls OPTIONAL }
+     controls [0] Controls OPTIONAL }
 @
 -}
-instance FromAsn1 op =>  FromAsn1 (LdapMessage op) where
+instance FromAsn1 op => FromAsn1 (LdapMessage op) where
   fromAsn1 = do
     Asn1.Start Asn1.Sequence <- next
-    i  <- fromAsn1
+    i <- fromAsn1
     op <- fromAsn1
     Asn1.End Asn1.Sequence <- next
     return (LdapMessage i op Nothing)
 
 {- |
 @
-MessageID ::= INTEGER (0 ..  maxInt)
+MessageID ::= INTEGER (0 .. maxInt)
 @
 -}
 instance FromAsn1 Id where
@@ -82,7 +75,7 @@ instance FromAsn1 LdapString where
     Asn1.OctetString s <- next
     case Text.decodeUtf8' s of
       Right t -> return (LdapString t)
-      Left  _ -> empty
+      Left _ -> empty
 
 {- |
 @
@@ -94,7 +87,7 @@ instance FromAsn1 LdapOid where
     Asn1.OctetString s <- next
     case Text.decodeUtf8' s of
       Right t -> return (LdapOid t)
-      Left  _ -> empty
+      Left _ -> empty
 
 {- |
 @
@@ -125,14 +118,14 @@ instance FromAsn1 AttributeValue where
 {- |
 @
 PartialAttribute ::= SEQUENCE {
-     type       AttributeDescription,
-     vals       SET OF value AttributeValue }
+     type AttributeDescription,
+     vals SET OF value AttributeValue }
 @
 -}
 instance FromAsn1 PartialAttribute where
   fromAsn1 = do
     Asn1.Start Asn1.Sequence <- next
-    d  <- fromAsn1
+    d <- fromAsn1
     Asn1.Start Asn1.Set <- next
     vs <- many fromAsn1
     Asn1.End Asn1.Set <- next
@@ -142,57 +135,57 @@ instance FromAsn1 PartialAttribute where
 {- |
 @
 LDAPResult ::= SEQUENCE {
-     resultCode         ENUMERATED {
-          success                      (0),
-          operationsError              (1),
-          protocolError                (2),
-          timeLimitExceeded            (3),
-          sizeLimitExceeded            (4),
-          compareFalse                 (5),
-          compareTrue                  (6),
-          authMethodNotSupported       (7),
-          strongerAuthRequired         (8),
+     resultCode ENUMERATED {
+          success (0),
+          operationsError (1),
+          protocolError (2),
+          timeLimitExceeded (3),
+          sizeLimitExceeded (4),
+          compareFalse (5),
+          compareTrue (6),
+          authMethodNotSupported (7),
+          strongerAuthRequired (8),
           -- 9 reserved --
-          referral                     (10),
-          adminLimitExceeded           (11),
+          referral (10),
+          adminLimitExceeded (11),
           unavailableCriticalExtension (12),
-          confidentialityRequired      (13),
-          saslBindInProgress           (14),
-          noSuchAttribute              (16),
-          undefinedAttributeType       (17),
-          inappropriateMatching        (18),
-          constraintViolation          (19),
-          attributeOrValueExists       (20),
-          invalidAttributeSyntax       (21),
+          confidentialityRequired (13),
+          saslBindInProgress (14),
+          noSuchAttribute (16),
+          undefinedAttributeType (17),
+          inappropriateMatching (18),
+          constraintViolation (19),
+          attributeOrValueExists (20),
+          invalidAttributeSyntax (21),
           -- 22-31 unused --
-          noSuchObject                 (32),
-          aliasProblem                 (33),
-          invalidDNSyntax              (34),
+          noSuchObject (32),
+          aliasProblem (33),
+          invalidDNSyntax (34),
           -- 35 reserved for undefined isLeaf --
-          aliasDereferencingProblem    (36),
+          aliasDereferencingProblem (36),
           -- 37-47 unused --
-          inappropriateAuthentication  (48),
-          invalidCredentials           (49),
-          insufficientAccessRights     (50),
-          busy                         (51),
-          unavailable                  (52),
-          unwillingToPerform           (53),
-          loopDetect                   (54),
+          inappropriateAuthentication (48),
+          invalidCredentials (49),
+          insufficientAccessRights (50),
+          busy (51),
+          unavailable (52),
+          unwillingToPerform (53),
+          loopDetect (54),
           -- 55-63 unused --
-          namingViolation              (64),
-          objectClassViolation         (65),
-          notAllowedOnNonLeaf          (66),
-          notAllowedOnRDN              (67),
-          entryAlreadyExists           (68),
-          objectClassModsProhibited    (69),
+          namingViolation (64),
+          objectClassViolation (65),
+          notAllowedOnNonLeaf (66),
+          notAllowedOnRDN (67),
+          entryAlreadyExists (68),
+          objectClassModsProhibited (69),
           -- 70 reserved for CLDAP --
-          affectsMultipleDSAs          (71),
+          affectsMultipleDSAs (71),
           -- 72-79 unused --
-          other                        (80),
-          ...  },
-     matchedDN          LDAPDN,
-     diagnosticMessage  LDAPString,
-     referral           [3] Referral OPTIONAL }
+          other (80),
+          ... },
+     matchedDN LDAPDN,
+     diagnosticMessage LDAPString,
+     referral [3] Referral OPTIONAL }
 @
 -}
 instance FromAsn1 LdapResult where
@@ -200,15 +193,15 @@ instance FromAsn1 LdapResult where
     resultCode <- do
       Asn1.Enumerated x <- next
       case x of
-        0  -> pure Success
-        1  -> pure OperationError
-        2  -> pure ProtocolError
-        3  -> pure TimeLimitExceeded
-        4  -> pure SizeLimitExceeded
-        5  -> pure CompareFalse
-        6  -> pure CompareTrue
-        7  -> pure AuthMethodNotSupported
-        8  -> pure StrongerAuthRequired
+        0 -> pure Success
+        1 -> pure OperationError
+        2 -> pure ProtocolError
+        3 -> pure TimeLimitExceeded
+        4 -> pure SizeLimitExceeded
+        5 -> pure CompareFalse
+        6 -> pure CompareTrue
+        7 -> pure AuthMethodNotSupported
+        8 -> pure StrongerAuthRequired
         10 -> pure Referral
         11 -> pure AdminLimitExceeded
         12 -> pure UnavailableCriticalExtension
@@ -239,11 +232,11 @@ instance FromAsn1 LdapResult where
         69 -> pure ObjectClassModsProhibited
         71 -> pure AffectsMultipleDSAs
         80 -> pure Other
-        _  -> empty
-    matchedDn  <- fromAsn1
+        _ -> empty
+    matchedDn <- fromAsn1
     diagnosticMessage
                <- fromAsn1
-    referral   <- optional $ do
+    referral <- optional $ do
       Asn1.Start (Asn1.Container Asn1.Context 0) <- next
       x <- fromAsn1
       Asn1.End (Asn1.Container Asn1.Context 0) <- next
@@ -274,13 +267,13 @@ instance FromAsn1 Uri where
 @
 BindResponse ::= [APPLICATION 1] SEQUENCE {
      COMPONENTS OF LDAPResult,
-     serverSaslCreds    [7] OCTET STRING OPTIONAL }
+     serverSaslCreds [7] OCTET STRING OPTIONAL }
 @
 
 @
 SearchResultEntry ::= [APPLICATION 4] SEQUENCE {
-     objectName      LDAPDN,
-     attributes      PartialAttributeList }
+     objectName LDAPDN,
+     attributes PartialAttributeList }
 @
 
 @
@@ -315,14 +308,14 @@ CompareResponse ::= [APPLICATION 15] LDAPResult
 @
 ExtendedResponse ::= [APPLICATION 24] SEQUENCE {
      COMPONENTS OF LDAPResult,
-     responseName     [10] LDAPOID OPTIONAL,
-     responseValue    [11] OCTET STRING OPTIONAL }
+     responseName [10] LDAPOID OPTIONAL,
+     responseValue [11] OCTET STRING OPTIONAL }
 @
 
 @
 IntermediateResponse ::= [APPLICATION 25] SEQUENCE {
-     responseName     [0] LDAPOID OPTIONAL,
-     responseValue    [1] OCTET STRING OPTIONAL }
+     responseName [0] LDAPOID OPTIONAL,
+     responseValue [1] OCTET STRING OPTIONAL }
 @
 -}
 instance FromAsn1 ProtocolServerOp where
@@ -349,7 +342,7 @@ instance FromAsn1 ProtocolServerOp where
         Asn1.Other Asn1.Context 10 s <- next
         return s
       name <- maybe (return Nothing) (\n -> case Text.decodeUtf8' n of
-        Left  _    -> empty
+        Left _ -> empty
         Right name -> return (Just name)) utf8Name
       value <- optional $ do
         Asn1.Other Asn1.Context 11 s <- next
@@ -359,7 +352,7 @@ instance FromAsn1 ProtocolServerOp where
 
     , do
       Asn1.Start (Asn1.Container Asn1.Application 25) <- next
-      name  <- optional fromAsn1
+      name <- optional fromAsn1
       value <- optional $ do
         Asn1.OctetString s <- next
         return s
@@ -419,10 +412,8 @@ instance MonadPlus (Parser s) where
   Parser ma `mplus` Parser mb =
     Parser (\s -> ma s `mplus` mb s)
 
-#if __GLASGOW_HASKELL__ >= 806
 instance MonadFail (Parser s) where
   fail _ = mzero
-#endif
 
 parse :: Parser s a -> s -> Maybe (s, a)
 parse = unParser

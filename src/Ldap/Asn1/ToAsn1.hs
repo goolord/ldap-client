@@ -2,25 +2,23 @@
 -- | This module contains convertions from LDAP types to ASN.1.
 --
 -- Various hacks are employed because "asn1-encoding" only encodes to DER, but
--- LDAP demands BER-encoding.  So, when a definition looks suspiciously different
+-- LDAP demands BER-encoding. So, when a definition looks suspiciously different
 -- from the spec in the comment, that's why.  I hope all that will be fixed
 -- eventually.
 module Ldap.Asn1.ToAsn1
   ( ToAsn1(toAsn1)
   ) where
 
-import           Data.ASN1.Types (ASN1, ASN1Class, ASN1Tag, ASN1ConstructionType)
+import Data.ASN1.Types (ASN1, ASN1Class, ASN1Tag, ASN1ConstructionType)
+import Data.ByteString (ByteString)
+import Data.Foldable (fold, foldMap)
+import Data.List.NonEmpty (NonEmpty)
+import Data.Maybe (maybe)
+import Data.Monoid (Endo(Endo), (<>), mempty)
+import Ldap.Asn1.Type
+import Prelude (Integer, (.), fromIntegral)
 import qualified Data.ASN1.Types as Asn1
-import           Data.ByteString (ByteString)
-import           Data.Foldable (fold, foldMap)
-import           Data.List.NonEmpty (NonEmpty)
-import           Data.Maybe (maybe)
-import           Data.Monoid (Endo(Endo), (<>), mempty)
 import qualified Data.Text.Encoding as Text
-import           Prelude (Integer, (.), fromIntegral)
-
-import           Ldap.Asn1.Type
-
 
 -- | Convert a LDAP type to ASN.1.
 --
@@ -31,19 +29,19 @@ class ToAsn1 a where
 {- |
 @
 LDAPMessage ::= SEQUENCE {
-     messageID       MessageID,
-     protocolOp      CHOICE {
-          bindRequest           BindRequest,
-          bindResponse          BindResponse,
-          unbindRequest         UnbindRequest,
-          searchRequest         SearchRequest,
-          searchResEntry        SearchResultEntry,
-          searchResDone         SearchResultDone,
-          searchResRef          SearchResultReference,
-          addRequest            AddRequest,
-          addResponse           AddResponse,
+     messageID MessageID,
+     protocolOp CHOICE {
+          bindRequest BindRequest,
+          bindResponse BindResponse,
+          unbindRequest UnbindRequest,
+          searchRequest SearchRequest,
+          searchResEntry SearchResultEntry,
+          searchResDone SearchResultDone,
+          searchResRef SearchResultReference,
+          addRequest AddRequest,
+          addResponse AddResponse,
           ... },
-     controls       [0] Controls OPTIONAL }
+     controls [0] Controls OPTIONAL }
 @
 -}
 instance ToAsn1 op => ToAsn1 (LdapMessage op) where
@@ -52,7 +50,7 @@ instance ToAsn1 op => ToAsn1 (LdapMessage op) where
 
 {- |
 @
-MessageID ::= INTEGER (0 ..  maxInt)
+MessageID ::= INTEGER (0 .. maxInt)
 @
 -}
 instance ToAsn1 Id where
@@ -109,8 +107,8 @@ instance ToAsn1 AttributeValue where
 {- |
 @
 AttributeValueAssertion ::= SEQUENCE {
-     attributeDesc   AttributeDescription,
-     assertionValue  AssertionValue }
+     attributeDesc AttributeDescription,
+     assertionValue AssertionValue }
 @
 -}
 instance ToAsn1 AttributeValueAssertion where
@@ -128,8 +126,8 @@ instance ToAsn1 AssertionValue where
 {- |
 @
 PartialAttribute ::= SEQUENCE {
-     type       AttributeDescription,
-     vals       SET OF value AttributeValue }
+     type AttributeDescription,
+     vals SET OF value AttributeValue }
 @
 -}
 instance ToAsn1 PartialAttribute where
@@ -164,9 +162,9 @@ instance ToAsn1 Controls where
 {- |
 @
 Control ::= SEQUENCE {
-     controlType             LDAPOID,
-     criticality             BOOLEAN DEFAULT FALSE,
-     controlValue            OCTET STRING OPTIONAL }
+     controlType LDAPOID,
+     criticality BOOLEAN DEFAULT FALSE,
+     controlValue OCTET STRING OPTIONAL }
 @
 -}
 instance ToAsn1 Control where
@@ -180,9 +178,9 @@ instance ToAsn1 Control where
 {- |
 @
 BindRequest ::= [APPLICATION 0] SEQUENCE {
-     version                 INTEGER (1 ..  127),
-     name                    LDAPDN,
-     authentication          AuthenticationChoice }
+     version INTEGER (1 .. 127),
+     name LDAPDN,
+     authentication AuthenticationChoice }
 @
 
 @
@@ -191,40 +189,40 @@ UnbindRequest ::= [APPLICATION 2] NULL
 
 @
 SearchRequest ::= [APPLICATION 3] SEQUENCE {
-     baseObject      LDAPDN,
-     scope           ENUMERATED {
-          baseObject              (0),
-          singleLevel             (1),
-          wholeSubtree            (2),
-          ...  },
-     derefAliases    ENUMERATED {
-          neverDerefAliases       (0),
-          derefInSearching        (1),
-          derefFindingBaseObj     (2),
-          derefAlways             (3) },
-     sizeLimit       INTEGER (0 ..  maxInt),
-     timeLimit       INTEGER (0 ..  maxInt),
-     typesOnly       BOOLEAN,
-     filter          Filter,
-     attributes      AttributeSelection }
+     baseObject LDAPDN,
+     scope ENUMERATED {
+          baseObject (0),
+          singleLevel (1),
+          wholeSubtree (2),
+          ... },
+     derefAliases ENUMERATED {
+          neverDerefAliases (0),
+          derefInSearching (1),
+          derefFindingBaseObj (2),
+          derefAlways (3) },
+     sizeLimit INTEGER (0 .. maxInt),
+     timeLimit INTEGER (0 .. maxInt),
+     typesOnly BOOLEAN,
+     filter Filter,
+     attributes AttributeSelection }
 @
 
 @
 ModifyRequest ::= [APPLICATION 6] SEQUENCE {
-     object          LDAPDN,
-     changes         SEQUENCE OF change SEQUENCE {
-          operation       ENUMERATED {
-               add     (0),
-               delete  (1),
+     object LDAPDN,
+     changes SEQUENCE OF change SEQUENCE {
+          operation ENUMERATED {
+               add (0),
+               delete (1),
                replace (2),
-               ...  },
-          modification    PartialAttribute } }
+               ... },
+          modification PartialAttribute } }
 @
 
 @
 AddRequest ::= [APPLICATION 8] SEQUENCE {
-     entry           LDAPDN,
-     attributes      AttributeList }
+     entry LDAPDN,
+     attributes AttributeList }
 @
 
 @
@@ -233,22 +231,22 @@ DelRequest ::= [APPLICATION 10] LDAPDN
 
 @
 ModifyDNRequest ::= [APPLICATION 12] SEQUENCE {
-     entry           LDAPDN,
-     newrdn          RelativeLDAPDN,
-     deleteoldrdn    BOOLEAN,
-     newSuperior     [0] LDAPDN OPTIONAL }
+     entry LDAPDN,
+     newrdn RelativeLDAPDN,
+     deleteoldrdn BOOLEAN,
+     newSuperior [0] LDAPDN OPTIONAL }
 @
 
 @
 CompareRequest ::= [APPLICATION 14] SEQUENCE {
-     entry           LDAPDN,
-     ava             AttributeValueAssertion }
+     entry LDAPDN,
+     ava AttributeValueAssertion }
 @
 
 @
 ExtendedRequest ::= [APPLICATION 23] SEQUENCE {
-     requestName      [0] LDAPOID,
-     requestValue     [1] OCTET STRING OPTIONAL }
+     requestName [0] LDAPOID,
+     requestValue [1] OCTET STRING OPTIONAL }
 @
 -}
 instance ToAsn1 ProtocolClientOp where
@@ -269,20 +267,20 @@ instance ToAsn1 ProtocolClientOp where
       ])
    where
     s' = case s of
-      BaseObject   -> 0
-      SingleLevel  -> 1
+      BaseObject -> 0
+      SingleLevel -> 1
       WholeSubtree -> 2
     da' = case da of
-      NeverDerefAliases      -> 0
-      DerefInSearching       -> 1
+      NeverDerefAliases -> 0
+      DerefInSearching -> 1
       DerefFindingBaseObject -> 2
-      DerefAlways            -> 3
+      DerefAlways -> 3
   toAsn1 (ModifyRequest dn xs) =
     application 6 (fold
       [ toAsn1 dn
       , sequence (foldMap (\(op, pa) -> sequence (enum (case op of
-          Add     -> 0
-          Delete  -> 1
+          Add -> 0
+          Delete -> 1
           Replace -> 2) <> toAsn1 pa)) xs)
       ])
   toAsn1 (AddRequest dn as) =
@@ -309,14 +307,14 @@ instance ToAsn1 ProtocolClientOp where
 {- |
 @
 AuthenticationChoice ::= CHOICE {
-     simple                  [0] OCTET STRING,
-     sasl                    [3] SaslCredentials,
-     ...  }
+     simple [0] OCTET STRING,
+     sasl [3] SaslCredentials,
+     ... }
 
 
 SaslCredentials ::= SEQUENCE {
-     mechanism               LDAPString,
-     credentials             OCTET STRING OPTIONAL }
+     mechanism LDAPString,
+     credentials OCTET STRING OPTIONAL }
 @
 -}
 instance ToAsn1 AuthenticationChoice where
@@ -337,41 +335,41 @@ instance ToAsn1 AttributeSelection where
 {- |
 @
 Filter ::= CHOICE {
-     and             [0] SET SIZE (1..MAX) OF filter Filter,
-     or              [1] SET SIZE (1..MAX) OF filter Filter,
-     not             [2] Filter,
-     equalityMatch   [3] AttributeValueAssertion,
-     substrings      [4] SubstringFilter,
-     greaterOrEqual  [5] AttributeValueAssertion,
-     lessOrEqual     [6] AttributeValueAssertion,
-     present         [7] AttributeDescription,
-     approxMatch     [8] AttributeValueAssertion,
+     and [0] SET SIZE (1..MAX) OF filter Filter,
+     or [1] SET SIZE (1..MAX) OF filter Filter,
+     not [2] Filter,
+     equalityMatch [3] AttributeValueAssertion,
+     substrings [4] SubstringFilter,
+     greaterOrEqual [5] AttributeValueAssertion,
+     lessOrEqual [6] AttributeValueAssertion,
+     present [7] AttributeDescription,
+     approxMatch [8] AttributeValueAssertion,
      extensibleMatch [9] MatchingRuleAssertion,
-     ...  }
+     ... }
 @
 -}
 instance ToAsn1 Filter where
   toAsn1 f = case f of
-    And xs            -> context 0 (toAsn1 xs)
-    Or xs             -> context 1 (toAsn1 xs)
-    Not x             -> context 2 (toAsn1 x)
-    EqualityMatch x   -> context 3 (toAsn1 x)
-    Substrings x      -> context 4 (toAsn1 x)
-    GreaterOrEqual x  -> context 5 (toAsn1 x)
-    LessOrEqual x     -> context 6 (toAsn1 x)
+    And xs -> context 0 (toAsn1 xs)
+    Or xs -> context 1 (toAsn1 xs)
+    Not x -> context 2 (toAsn1 x)
+    EqualityMatch x -> context 3 (toAsn1 x)
+    Substrings x -> context 4 (toAsn1 x)
+    GreaterOrEqual x -> context 5 (toAsn1 x)
+    LessOrEqual x -> context 6 (toAsn1 x)
     Present (AttributeDescription (LdapString x))
                       -> other Asn1.Context 7 (Text.encodeUtf8 x)
-    ApproxMatch x     -> context 8 (toAsn1 x)
+    ApproxMatch x -> context 8 (toAsn1 x)
     ExtensibleMatch x -> context 9 (toAsn1 x)
 
 {- |
 @
 SubstringFilter ::= SEQUENCE {
-     type           AttributeDescription,
-     substrings     SEQUENCE SIZE (1..MAX) OF substring CHOICE {
-          initial [0] AssertionValue,  -- can occur at most once
-          any     [1] AssertionValue,
-          final   [2] AssertionValue } -- can occur at most once
+     type AttributeDescription,
+     substrings SEQUENCE SIZE (1..MAX) OF substring CHOICE {
+          initial [0] AssertionValue, -- can occur at most once
+          any [1] AssertionValue,
+          final [2] AssertionValue } -- can occur at most once
      }
 @
 -}
@@ -379,16 +377,16 @@ instance ToAsn1 SubstringFilter where
   toAsn1 (SubstringFilter ad ss) =
     toAsn1 ad <> sequence (foldMap (\s -> case s of
       Initial (AssertionValue v) -> other Asn1.Context 0 v
-      Any (AssertionValue v)     -> other Asn1.Context 1 v
-      Final (AssertionValue v)   -> other Asn1.Context 2 v) ss)
+      Any (AssertionValue v) -> other Asn1.Context 1 v
+      Final (AssertionValue v) -> other Asn1.Context 2 v) ss)
 
 {- |
 @
 MatchingRuleAssertion ::= SEQUENCE {
-     matchingRule    [1] MatchingRuleId OPTIONAL,
-     type            [2] AttributeDescription OPTIONAL,
-     matchValue      [3] AssertionValue,
-     dnAttributes    [4] BOOLEAN DEFAULT FALSE }
+     matchingRule [1] MatchingRuleId OPTIONAL,
+     type [2] AttributeDescription OPTIONAL,
+     matchValue [3] AssertionValue,
+     dnAttributes [4] BOOLEAN DEFAULT FALSE }
 @
 -}
 instance ToAsn1 MatchingRuleAssertion where

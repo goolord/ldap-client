@@ -8,8 +8,8 @@ import Data.Text (Text)
 
 -- | Message envelope. (Section 4.1.1.)
 data LdapMessage op = LdapMessage
-  { ldapMessageId       :: !Id
-  , ldapMessageOp       :: !op
+  { ldapMessageId :: !Id
+  , ldapMessageOp :: !op
   , ldapMessageControls :: !(Maybe Controls)
   } deriving (Show, Eq)
 
@@ -17,7 +17,7 @@ data LdapMessage op = LdapMessage
 newtype Id = Id { unId :: Int32 }
     deriving (Show, Eq, Ord)
 
--- | Client requests.  The RFC doesn't make a difference between 'ProtocolClientOp'
+-- | Client requests. The RFC doesn't make a difference between 'ProtocolClientOp'
 -- and 'ProtocolServerOp' but it's useful to distinguish between them in Haskell.
 data ProtocolClientOp =
     BindRequest !Int8 !LdapDn !AuthenticationChoice
@@ -31,7 +31,7 @@ data ProtocolClientOp =
   | ExtendedRequest !LdapOid !(Maybe ByteString)
     deriving (Show, Eq)
 
--- | Server responses.  The RFC doesn't make a difference between 'ProtocolClientOp'
+-- | Server responses. The RFC doesn't make a difference between 'ProtocolClientOp'
 -- and 'ProtocolServerOp' but it's useful to distinguish between them in Haskell.
 data ProtocolServerOp =
     BindResponse !LdapResult !(Maybe ByteString)
@@ -60,8 +60,8 @@ data SaslMechanism =
 
 -- | Scope of the search to be performed.
 data Scope =
-    BaseObject   -- ^ Constrained to the entry named by baseObject.
-  | SingleLevel  -- ^ Constrained to the immediate subordinates of the entry named by baseObject.
+    BaseObject -- ^ Constrained to the entry named by baseObject.
+  | SingleLevel -- ^ Constrained to the immediate subordinates of the entry named by baseObject.
   | WholeSubtree -- ^ Constrained to the entry named by baseObject and to all its subordinates.
     deriving (Show, Eq)
 
@@ -69,23 +69,23 @@ data Scope =
 -- [RFC4512]) are to be dereferenced during stages of the Search
 -- operation.
 data DerefAliases =
-    NeverDerefAliases      -- ^ Do not dereference aliases in searching or in locating the base object of the Search.
-  | DerefInSearching       -- ^ While searching subordinates of the base object, dereference any alias within the search scope.
+    NeverDerefAliases -- ^ Do not dereference aliases in searching or in locating the base object of the Search.
+  | DerefInSearching -- ^ While searching subordinates of the base object, dereference any alias within the search scope.
   | DerefFindingBaseObject -- ^ Dereference aliases in locating the base object of the Search.
-  | DerefAlways            -- ^ Dereference aliases both in searching and in locating the base object of the Search.
+  | DerefAlways -- ^ Dereference aliases both in searching and in locating the base object of the Search.
     deriving (Show, Eq)
 
 -- | Conditions that must be fulfilled in order for the Search to match a given entry.
 data Filter =
-    And !(NonEmpty Filter)                  -- ^ All filters evaluate to @TRUE@
-  | Or !(NonEmpty Filter)                   -- ^ Any filter evaluates to @TRUE@
-  | Not !Filter                             -- ^ Filter evaluates to @FALSE@
-  | EqualityMatch !AttributeValueAssertion  -- ^ @EQUALITY@ rule returns @TRUE@
-  | Substrings !SubstringFilter             -- ^ @SUBSTR@ rule returns @TRUE@
+    And !(NonEmpty Filter) -- ^ All filters evaluate to @TRUE@
+  | Or !(NonEmpty Filter) -- ^ Any filter evaluates to @TRUE@
+  | Not !Filter -- ^ Filter evaluates to @FALSE@
+  | EqualityMatch !AttributeValueAssertion -- ^ @EQUALITY@ rule returns @TRUE@
+  | Substrings !SubstringFilter -- ^ @SUBSTR@ rule returns @TRUE@
   | GreaterOrEqual !AttributeValueAssertion -- ^ @ORDERING@ rule returns @FALSE@
-  | LessOrEqual !AttributeValueAssertion    -- ^ @ORDERING@ or @EQUALITY@ rule returns @TRUE@
-  | Present !AttributeDescription           -- ^ Attribute is present in the entry
-  | ApproxMatch !AttributeValueAssertion    -- ^ Same as 'EqualityMatch' for most servers
+  | LessOrEqual !AttributeValueAssertion -- ^ @ORDERING@ or @EQUALITY@ rule returns @TRUE@
+  | Present !AttributeDescription -- ^ Attribute is present in the entry
+  | ApproxMatch !AttributeValueAssertion -- ^ Same as 'EqualityMatch' for most servers
   | ExtensibleMatch !MatchingRuleAssertion
     deriving (Show, Eq)
 
@@ -101,7 +101,7 @@ data Substring =
 data MatchingRuleAssertion = MatchingRuleAssertion !(Maybe MatchingRuleId) !(Maybe AttributeDescription) !AssertionValue !Bool
     deriving (Show, Eq)
 
--- | Matching rules are defined in Section 4.1.3 of [RFC4512].  A matching
+-- | Matching rules are defined in Section 4.1.3 of [RFC4512]. A matching
 -- rule is identified in the protocol by the printable representation of
 -- either its <numericoid> or one of its short name descriptors
 -- [RFC4512], e.g., 'caseIgnoreMatch' or '2.5.13.2'. (Section 4.1.8.)
@@ -221,7 +221,7 @@ newtype LdapString = LdapString Text
 
 -- | The LDAPOID is a notational convenience to indicate that the
 -- permitted value of this string is a (UTF-8 encoded) dotted-decimal
--- representation of an OBJECT IDENTIFIER.  Although an LDAPOID is
+-- representation of an OBJECT IDENTIFIER. Although an LDAPOID is
 -- encoded as an OCTET STRING, values are limited to the definition of
 -- \<numericoid\> given in Section 1.4 of [RFC4512].
 newtype LdapOid = LdapOid Text
