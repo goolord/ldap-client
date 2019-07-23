@@ -11,7 +11,7 @@ import           Control.Applicative (Alternative(..), liftA2, optional)
 import           Control.Applicative (Applicative(..), Alternative(..), liftA2, optional)
 #endif
 import           Control.Monad (MonadPlus(..), (>=>), guard)
-#if __GLASGOW_HASKELL__ >= 86
+#if __GLASGOW_HASKELL__ >= 806
 import           Control.Monad.Fail (MonadFail, fail)
 #endif
 import           Data.ASN1.Types (ASN1)
@@ -419,7 +419,7 @@ instance MonadPlus (Parser s) where
   Parser ma `mplus` Parser mb =
     Parser (\s -> ma s `mplus` mb s)
 
-#if __GLASGOW_HASKELL__ >= 86
+#if __GLASGOW_HASKELL__ >= 806
 instance MonadFail (Parser s) where
   fail _ = mzero
 #endif
