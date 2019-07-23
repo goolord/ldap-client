@@ -6,3 +6,5 @@ Gemfile.lock
 *~
 *.swp
 /result
+dist*
+.ghc*
